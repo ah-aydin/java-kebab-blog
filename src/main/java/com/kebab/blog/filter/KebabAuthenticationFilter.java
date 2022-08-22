@@ -3,7 +3,6 @@ package com.kebab.blog.filter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kebab.blog.utils.JWTUtils;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationServiceException;
@@ -31,7 +30,10 @@ public class KebabAuthenticationFilter extends UsernamePasswordAuthenticationFil
 
 
     @Override
-    public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response) throws AuthenticationException {
+    public Authentication attemptAuthentication(
+            HttpServletRequest request,
+            HttpServletResponse response
+    ) throws AuthenticationException {
         String username, password;
 
         log.info("KebabAuthenticationFilter::attemptAuthentication");
@@ -48,7 +50,12 @@ public class KebabAuthenticationFilter extends UsernamePasswordAuthenticationFil
     }
 
     @Override
-    protected void successfulAuthentication(HttpServletRequest request, HttpServletResponse response, FilterChain chain, Authentication authentication) throws IOException, ServletException {
+    protected void successfulAuthentication(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            FilterChain chain,
+            Authentication authentication
+    ) throws IOException {
         log.info("KebabAuthenticationFilter::successfulAuthentication");
 
         Map<String, String> tokens = jwtUtils.authTokenResponse(authentication, request);

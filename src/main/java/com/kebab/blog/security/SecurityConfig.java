@@ -41,7 +41,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         log.info("SecurityConfig::configure::httpSecurity");
         KebabAuthenticationFilter kebabAuthenticationFilter = new KebabAuthenticationFilter(
                 super.authenticationManagerBean(),
-                applicationContext.getBean(JWTUtils.class)
+                getJWTUtilsBean()
         );
         kebabAuthenticationFilter.setFilterProcessesUrl("/api/v1/auth/token");
 
@@ -53,12 +53,16 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         http.authorizeRequests().anyRequest().authenticated();
 
         http.addFilter(kebabAuthenticationFilter);
-        http.addFilterBefore(new KebabAuthorizationFilter(), UsernamePasswordAuthenticationFilter.class);
+        http.addFilterBefore(new KebabAuthorizationFilter(getJWTUtilsBean()), UsernamePasswordAuthenticationFilter.class);
     }
 
     @Bean
     @Override
     public AuthenticationManager authenticationManagerBean() throws Exception {
         return super.authenticationManagerBean();
+    }
+
+    public JWTUtils getJWTUtilsBean() {
+        return applicationContext.getBean(JWTUtils.class);
     }
 }

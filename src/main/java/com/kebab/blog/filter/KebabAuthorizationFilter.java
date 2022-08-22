@@ -1,13 +1,10 @@
 package com.kebab.blog.filter;
 
-import com.auth0.jwt.JWT;
-import com.auth0.jwt.JWTVerifier;
-import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.kebab.blog.utils.AlgorithmUtils;
+import com.kebab.blog.utils.JWTUtils;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -27,8 +24,9 @@ import java.util.Map;
 import static java.util.Arrays.stream;
 
 @Slf4j
+@RequiredArgsConstructor
 public class KebabAuthorizationFilter extends OncePerRequestFilter {
-    public static String AUTHORIZATION_PREFIX = "Bearer ";
+    private final JWTUtils jwtUtils;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
@@ -38,39 +36,32 @@ public class KebabAuthorizationFilter extends OncePerRequestFilter {
         }
 
         log.info("KebabAuthorizationFilter::doFilterInternal");
-        String authorizationHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
-        if (authorizationHeader != null && authorizationHeader.startsWith(AUTHORIZATION_PREFIX)) {
-            try {
-                String token = authorizationHeader.substring(AUTHORIZATION_PREFIX.length());
 
-                Algorithm algorithm = AlgorithmUtils.getAlgorithm();
-                JWTVerifier verifier = JWT.require(algorithm).build();
-                DecodedJWT decodedJWT = verifier.verify(token);
-                String username = decodedJWT.getSubject();
-                String[] roles = decodedJWT.getClaim("roles").asArray(String.class);
-                Collection<SimpleGrantedAuthority> authorities = new ArrayList<>();
-                stream(roles).forEach(role -> {
-                    authorities.add(new SimpleGrantedAuthority(role));
-                });
+        try {
+            DecodedJWT decodedJWT = jwtUtils.getDecodedJWT(request);
+            String username = decodedJWT.getSubject();
+            String[] roles = decodedJWT.getClaim("roles").asArray(String.class);
+            Collection<SimpleGrantedAuthority> authorities = new ArrayList<>();
+            stream(roles).forEach(role -> {
+                authorities.add(new SimpleGrantedAuthority(role));
+            });
 
-                UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(username, null, authorities);
-                SecurityContextHolder.getContext().setAuthentication(authenticationToken);
+            UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(username, null, authorities);
+            SecurityContextHolder.getContext().setAuthentication(authenticationToken);
 
-                filterChain.doFilter(request, response);
-            } catch (Exception e) {
-                log.error("Failed to log in: {}", e.getMessage());
-                response.setHeader("error", e.getMessage());
-                response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-                //response.sendError(HttpServletResponse.SC_FORBIDDEN);
-
-                Map<String, String> responseBody = new HashMap<>();
-                responseBody.put("error", e.getMessage());
-                response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-                new ObjectMapper().writeValue(response.getOutputStream(), responseBody);
-            }
+            filterChain.doFilter(request, response);
             return;
-        }
+        } catch (Exception e) {
+            log.error("Failed to log in: {}", e.getMessage());
+            response.setHeader("error", e.getMessage());
+            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            //response.sendError(HttpServletResponse.SC_FORBIDDEN);
 
+            Map<String, String> responseBody = new HashMap<>();
+            responseBody.put("error", e.getMessage());
+            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+            new ObjectMapper().writeValue(response.getOutputStream(), responseBody);
+        }
         filterChain.doFilter(request, response);
     }
 }

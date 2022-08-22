@@ -29,7 +29,7 @@ public class JWTUtils {
     @Autowired
     private final AppUserService appUserService;
 
-    private String getToken(HttpServletRequest request) {
+    public String getToken(HttpServletRequest request) {
         String authorizationHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
         if (authorizationHeader != null && authorizationHeader.startsWith(AUTHORIZATION_PREFIX)) {
             try {
@@ -41,15 +41,31 @@ public class JWTUtils {
         throw new RuntimeException("No authorization header with 'Bearer' was provided");
     }
 
-    private String getUsername(String token) {
+    public DecodedJWT getDecodedJWT(HttpServletRequest request) {
+        String token = getToken(request);
+        return getDecodedJWT(token);
+    }
+
+    public DecodedJWT getDecodedJWT(String token) {
         Algorithm algorithm = AlgorithmUtils.getAlgorithm();
         JWTVerifier verifier = JWT.require(algorithm).build();
-        DecodedJWT decodedJWT = verifier.verify(token);
+        return verifier.verify(token);
+    }
+
+    public String getUsername(HttpServletRequest request) {
+        String token = getToken(request);
+        return getUsername(token);
+    }
+
+    public String getUsername(String token) {
+        DecodedJWT decodedJWT = getDecodedJWT(token);
 
         return decodedJWT.getSubject();
     }
 
-    private String accessTokenBuilder(HttpServletRequest request, String token) {
+
+
+    public String accessTokenBuilder(HttpServletRequest request, String token) {
         AppUser user = appUserService.getUser(getUsername(token));
         return JWT
                 .create()
